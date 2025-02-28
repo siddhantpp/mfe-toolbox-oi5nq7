@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2018",
+    "module": "commonjs",
+    "outDir": "./build",
+    "rootDir": "./scripts",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "sourceMap": true,
+    "lib": ["ES2018", "DOM"],
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.ts"],
+  "exclude": ["node_modules", "build", "**/*.spec.ts", "dlls", "mex_source/bin"],
+  "ts-node": {
+    "transpileOnly": true,
+    "files": true
+  }
+}
