@@ -1,0 +1,10 @@
+We are building a cloud-based solution that digitizes Merchant Cash Advance (MCA) applications. The client, Dollar Funding, receives applications from brokers over email at the email address “[submissions@dollarfunding.com](mailto:submissions@dollarfunding.com)”. These emails contain PDF attachments that include the ISO application, and a set of bank statements.  
+On receiving an email, we need to do the following.  
+1\. Read the details of the message and extract message metadata like sender, body, subject, and so on.  
+2\. Store the message in a database, and track status (Processing? Ready? Failed?)  
+3\. Extract the PDF attachments, classify them, (Bank statement? ISO Application? Voided cheque?) and store them in a storage bucket that can be accessed securely by the client.  
+4\. Extract the text information from the ISO application and identify Merchant details like Business legal name, DBA name, Federal Tax id or EIN, Address, Industry and Revenue. Identify Funding details like Funding requested, and use of funds. Identify Owner information like Name, SSN, Address, Date of Birth, and ownership percentage for each listed owner. Save this information in a database.  
+5\. Notify the client via webhook that an application has been processed, or that it needs review when processing fails or a SSN or federal tax id is not found.  
+The OCR solution needs to be state of the art and highly specialized, it must support imperfections like hand-written applications, and applications that are not scanned correctly.  
+The interface needs to be an API as well as a UI. The client needs to be able to register a webhook, and add or edit it. They also need an API to download the application. The UI needs to display application information, attachments, and have the ability view registered webhooks as well as add or remove them.  
+The client will use this solution to replace 28 of their 30 head count human data entry team that currently does this manually. It needs to be robust, scalable and highly available.
