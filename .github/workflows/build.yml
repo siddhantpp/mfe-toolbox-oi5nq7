@@ -1,0 +1,296 @@
+name: Build MFE Toolbox
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup MATLAB
+      uses: matlab-actions/setup-matlab@v1
+      
+    - name: Cache MEX binaries
+      uses: actions/cache@v3
+      id: cache-mex-windows
+      with:
+        path: src/backend/dlls/*.mexw64
+        key: ${{ runner.os }}-mex-windows-${{ hashFiles('src/backend/mex_source/*.c', 'src/backend/mex_source/*.h') }}
+        
+    - name: Build Windows MEX files
+      if: steps.cache-mex-windows.outputs.cache-hit != 'true'
+      run: |
+        # Set MATLAB root for the compilation script
+        $env:MATLAB_ROOT = $(matlab -batch "disp(matlabroot)" | Select-Object -Last 1)
+        echo "MATLAB_ROOT set to: $env:MATLAB_ROOT"
+        
+        # Create dlls directory if it doesn't exist
+        mkdir -Force src/backend/dlls
+        
+        # Execute Windows compilation script
+        cd infrastructure/build_scripts
+        .\compile_mex_windows.bat
+        
+        # Verify MEX files were created
+        Get-ChildItem ..\..\src\backend\dlls\*.mexw64 | ForEach-Object { Write-Host "Generated: $($_.Name)" }
+      
+    - name: Upload Windows MEX artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows-mex-binaries
+        path: src/backend/dlls/*.mexw64
+        retention-days: 7
+
+  build-unix:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup MATLAB
+      uses: matlab-actions/setup-matlab@v1
+      
+    - name: Cache MEX binaries
+      uses: actions/cache@v3
+      id: cache-mex-unix
+      with:
+        path: src/backend/dlls/*.mexa64
+        key: ${{ runner.os }}-mex-unix-${{ hashFiles('src/backend/mex_source/*.c', 'src/backend/mex_source/*.h') }}
+        
+    - name: Install GCC compiler
+      if: steps.cache-mex-unix.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc g++
+        
+    - name: Build Unix MEX files
+      if: steps.cache-mex-unix.outputs.cache-hit != 'true'
+      run: |
+        # Set MATLAB root for the compilation script
+        export MATLAB_ROOT=$(matlab -batch "disp(matlabroot)" | tail -n 1)
+        echo "MATLAB_ROOT set to: $MATLAB_ROOT"
+        
+        # Create dlls directory if it doesn't exist
+        mkdir -p src/backend/dlls
+        
+        # Execute Unix compilation script
+        cd infrastructure/build_scripts
+        chmod +x compile_mex_unix.sh
+        ./compile_mex_unix.sh
+        
+        # Verify MEX files were created
+        ls -la ../../src/backend/dlls/*.mexa64 || echo "No MEX files found"
+      
+    - name: Upload Unix MEX artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: unix-mex-binaries
+        path: src/backend/dlls/*.mexa64
+        retention-days: 7
+
+  prepare-package:
+    needs: [build-windows, build-unix]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup MATLAB
+      uses: matlab-actions/setup-matlab@v1
+      
+    - name: Download Windows MEX binaries
+      uses: actions/download-artifact@v3
+      with:
+        name: windows-mex-binaries
+        path: windows-mex-temp
+        
+    - name: Download Unix MEX binaries
+      uses: actions/download-artifact@v3
+      with:
+        name: unix-mex-binaries
+        path: unix-mex-temp
+        
+    - name: Prepare package structure using MATLAB
+      run: |
+        # Create directory to hold the package
+        mkdir -p package
+        
+        # Run MATLAB packaging script
+        matlab -batch "cd('infrastructure/build_scripts'); package_path = package_toolbox(false); disp(['Package created at: ' package_path]);"
+        
+        # If the MATLAB script failed, fall back to manual packaging
+        if [ $? -ne 0 ]; then
+          echo "MATLAB packaging script failed, performing manual packaging..."
+          
+          # Create standard directory structure according to MFE Toolbox specifications
+          mkdir -p package/bootstrap
+          mkdir -p package/crosssection
+          mkdir -p package/distributions
+          mkdir -p package/GUI
+          mkdir -p package/multivariate
+          mkdir -p package/tests
+          mkdir -p package/timeseries
+          mkdir -p package/univariate
+          mkdir -p package/utility
+          mkdir -p package/realized
+          mkdir -p package/mex_source
+          mkdir -p package/dlls
+          mkdir -p package/duplication
+          
+          # Copy MATLAB source files
+          cp -r src/backend/bootstrap/*.m package/bootstrap/ || true
+          cp -r src/backend/crosssection/*.m package/crosssection/ || true
+          cp -r src/backend/distributions/*.m package/distributions/ || true
+          cp -r src/backend/GUI/*.m package/GUI/ || true
+          cp -r src/backend/GUI/*.fig package/GUI/ || true
+          cp -r src/backend/multivariate/*.m package/multivariate/ || true
+          cp -r src/backend/tests/*.m package/tests/ || true
+          cp -r src/backend/timeseries/*.m package/timeseries/ || true
+          cp -r src/backend/univariate/*.m package/univariate/ || true
+          cp -r src/backend/utility/*.m package/utility/ || true
+          cp -r src/backend/realized/*.m package/realized/ || true
+          cp -r src/backend/duplication/*.m package/duplication/ || true
+          
+          # Copy MEX source files
+          cp -r src/backend/mex_source/*.c package/mex_source/ || true
+          cp -r src/backend/mex_source/*.h package/mex_source/ || true
+          
+          # Copy core files
+          cp src/backend/addToPath.m package/ || true
+          cp src/backend/Contents.m package/ || true
+        fi
+        
+        # Copy MEX binaries from artifacts
+        cp windows-mex-temp/*.mexw64 package/dlls/ || true
+        cp unix-mex-temp/*.mexa64 package/dlls/ || true
+        
+        # Display package contents summary
+        echo "Package contents summary:"
+        find package -type d | sort
+        echo "Total MATLAB files: $(find package -name "*.m" | wc -l)"
+        echo "Total MEX binaries: $(find package/dlls -type f | wc -l)"
+        
+    - name: Upload package artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: mfe-toolbox-package
+        path: package/
+        retention-days: 7
+
+  validate-build:
+    needs: [prepare-package]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup MATLAB
+      uses: matlab-actions/setup-matlab@v1
+      
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: mfe-toolbox-package
+        path: package
+        
+    - name: Validate package structure
+      run: |
+        # Create validation report directory
+        mkdir -p validation-report
+        
+        # Check for mandatory directories
+        MANDATORY_DIRS="bootstrap crosssection distributions GUI multivariate tests timeseries univariate utility realized mex_source dlls"
+        FAILED=false
+        
+        echo "=== MFE Toolbox Build Validation Report ===" > validation-report/structure_check.txt
+        echo "Timestamp: $(date)" >> validation-report/structure_check.txt
+        echo "" >> validation-report/structure_check.txt
+        echo "1. Directory Structure Check:" >> validation-report/structure_check.txt
+        
+        for dir in $MANDATORY_DIRS; do
+          if [ -d "package/$dir" ]; then
+            echo "  ✅ $dir directory found" >> validation-report/structure_check.txt
+          else
+            echo "  ❌ ERROR: $dir directory missing" >> validation-report/structure_check.txt
+            FAILED=true
+          fi
+        done
+        
+        echo "" >> validation-report/structure_check.txt
+        echo "2. Core Files Check:" >> validation-report/structure_check.txt
+        
+        # Check for core files
+        CORE_FILES="addToPath.m Contents.m"
+        for file in $CORE_FILES; do
+          if [ -f "package/$file" ]; then
+            echo "  ✅ $file found" >> validation-report/structure_check.txt
+          else
+            echo "  ❌ ERROR: $file missing" >> validation-report/structure_check.txt
+            FAILED=true
+          fi
+        done
+        
+        echo "" >> validation-report/structure_check.txt
+        echo "3. MEX Binaries Check:" >> validation-report/structure_check.txt
+        
+        # Check for MEX binaries - list expected files
+        MEX_FILES="agarch_core armaxerrors composite_likelihood egarch_core igarch_core tarch_core"
+        
+        # Windows binaries check
+        WINDOWS_MEX_COUNT=0
+        echo "  Windows MEX binaries (.mexw64):" >> validation-report/structure_check.txt
+        for mex in $MEX_FILES; do
+          if [ -f "package/dlls/${mex}.mexw64" ]; then
+            echo "    ✅ ${mex}.mexw64 found" >> validation-report/structure_check.txt
+            WINDOWS_MEX_COUNT=$((WINDOWS_MEX_COUNT+1))
+          else
+            echo "    ⚠️ WARNING: ${mex}.mexw64 missing" >> validation-report/structure_check.txt
+          fi
+        done
+        
+        # Unix binaries check
+        UNIX_MEX_COUNT=0
+        echo "  Unix MEX binaries (.mexa64):" >> validation-report/structure_check.txt
+        for mex in $MEX_FILES; do
+          if [ -f "package/dlls/${mex}.mexa64" ]; then
+            echo "    ✅ ${mex}.mexa64 found" >> validation-report/structure_check.txt
+            UNIX_MEX_COUNT=$((UNIX_MEX_COUNT+1))
+          else
+            echo "    ⚠️ WARNING: ${mex}.mexa64 missing" >> validation-report/structure_check.txt
+          fi
+        done
+        
+        echo "" >> validation-report/structure_check.txt
+        echo "4. Summary:" >> validation-report/structure_check.txt
+        echo "  Windows MEX binaries: $WINDOWS_MEX_COUNT/6" >> validation-report/structure_check.txt
+        echo "  Unix MEX binaries: $UNIX_MEX_COUNT/6" >> validation-report/structure_check.txt
+        
+        if [ "$FAILED" = true ]; then
+          echo "  ❌ Build validation FAILED - critical components missing" >> validation-report/structure_check.txt
+          cat validation-report/structure_check.txt
+          exit 1
+        else
+          echo "  ✅ Build validation PASSED - package structure is correct" >> validation-report/structure_check.txt
+          if [ $WINDOWS_MEX_COUNT -eq 0 ] && [ $UNIX_MEX_COUNT -eq 0 ]; then
+            echo "  ⚠️ WARNING: No MEX binaries found. Package will have limited functionality." >> validation-report/structure_check.txt
+          fi
+          cat validation-report/structure_check.txt
+        fi
+        
+    - name: Upload validation report
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-validation-report
+        path: validation-report/
+        retention-days: 7
