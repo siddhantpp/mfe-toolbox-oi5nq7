@@ -1,0 +1,44 @@
+*.asv
+*.m~
+
+# MATLAB generated folders
+slprj/
+sccprj/
+*.slxc
+
+# Build output and temporary files
+build/
+dist/
+*.zip
+MFEToolbox.zip
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor/IDE specific files
+.idea/
+.vscode/
+
+# Log files
+*.log
+
+# Test output files
+testResults/
+test_reports/
+
+# Generated documentation
+docs/generated/
+
+# MATLAB workspace files (except example/test data)
+*.mat
+!examples/data/*.mat
+!src/test/data/*.mat
+
+# MEX Temporary Files
+*.o
+*.obj
+
+# Keep MEX binaries in the repository
+!src/backend/dlls/*.mex*
