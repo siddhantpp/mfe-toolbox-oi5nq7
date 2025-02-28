@@ -1,0 +1,111 @@
+{
+  "name": "mfe-toolbox-tests",
+  "version": "4.0.0",
+  "description": "Test framework for MATLAB Financial Econometrics Toolbox",
+  "private": true,
+  "author": "MFE Toolbox Team",
+  "license": "Proprietary",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mfe-toolbox/mfe-toolbox.git"
+  },
+  "scripts": {
+    "test": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_all_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "test:unit": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_unit_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "test:integration": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_integration_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "test:mex": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_mex_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "test:performance": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_performance_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "test:cross-platform": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_cross_platform_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "test:validation": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_validation_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "test:system": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_system_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "test:documentation": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_documentation_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "test:examples": "matlab -nodisplay -nosplash -nodesktop -r \"try, run_example_tests, catch e, disp(e), exit(1), end, exit(0);\"",
+    "generate-report": "ts-node scripts/generate-test-report.ts",
+    "clean": "rimraf test-results"
+  },
+  "mfe": {
+    "testCategories": [
+      "unit",
+      "integration",
+      "mex",
+      "performance",
+      "cross_platform",
+      "validation",
+      "system",
+      "documentation",
+      "examples"
+    ],
+    "testDataFiles": [
+      "financial_returns.mat",
+      "high_frequency_data.mat",
+      "cross_sectional_data.mat",
+      "macroeconomic_data.mat",
+      "simulated_data.mat",
+      "known_distributions.mat",
+      "voldata.mat"
+    ],
+    "matlabVersion": ">=R2009b",
+    "mexTests": [
+      "agarch_core",
+      "armaxerrors",
+      "composite_likelihood",
+      "egarch_core",
+      "igarch_core",
+      "tarch_core"
+    ],
+    "platforms": {
+      "windows": {
+        "extension": ".mexw64",
+        "target": "PCWIN64"
+      },
+      "unix": {
+        "extension": ".mexa64",
+        "target": "GLNXA64"
+      }
+    },
+    "matlabDependencies": {
+      "MATLAB": "core",
+      "MATLAB Base": "core",
+      "MATLAB Parallel Computing Toolbox": "optional",
+      "MATLAB Statistics Toolbox": "compatible with MATLAB R2009b",
+      "MATLAB GUIDE": "compatible with MATLAB R2009b",
+      "MATLAB Signal Processing Toolbox": "compatible with MATLAB R2009b",
+      "matlab.unittest": "compatible with MATLAB R2009b",
+      "MEX Function": "custom"
+    }
+  },
+  "devDependencies": {
+    "typescript": "^4.5.0",
+    "ts-node": "^10.4.0",
+    "jest": "^27.3.1",
+    "ts-jest": "^27.0.7",
+    "rimraf": "^3.0.2",
+    "chalk": "^4.1.2",
+    "fs-extra": "^10.0.0",
+    "@types/jest": "^27.0.2",
+    "@types/node": "^16.11.7",
+    "@types/fs-extra": "^9.0.13"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "collectCoverage": true,
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov"
+    ],
+    "testMatch": [
+      "**/*.spec.ts"
+    ]
+  },
+  "os": [
+    "windows",
+    "darwin",
+    "linux"
+  ],
+  "engines": {
+    "node": ">=14.0.0",
+    "matlab": ">=R2009b"
+  }
+}
