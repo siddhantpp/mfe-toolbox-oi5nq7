@@ -1,0 +1,219 @@
+# GitHub Actions workflow for comprehensive testing of the MFE Toolbox
+# Including unit tests, integration tests, MEX tests, performance tests, cross-platform compatibility tests, and validation tests.
+# This workflow ensures statistical accuracy, numerical stability, and cross-platform reliability.
+
+name: Test MFE Toolbox
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_run:
+    workflows: [Build MFE Toolbox]
+    types:
+      - completed
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # actions/checkout v3
+      - name: Setup MATLAB
+        uses: matlab-actions/setup-matlab@v1 # matlab-actions/setup-matlab v1
+      - name: Download MEX artifacts
+        uses: actions/download-artifact@v3 # actions/download-artifact v3
+        with:
+          name: unix-mex-binaries
+          path: src/backend/dlls
+      - name: Run unit tests
+        run: matlab -batch "cd('src/test'); run_unit_tests; exit;"
+      - name: Upload test reports
+        uses: actions/upload-artifact@v3 # actions/upload-artifact v3
+        if: always()
+        with:
+          name: unit-test-reports
+          path: src/test/reports/unit/*
+          retention-days: 7
+
+  integration-tests:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # actions/checkout v3
+      - name: Setup MATLAB
+        uses: matlab-actions/setup-matlab@v1 # matlab-actions/setup-matlab v1
+      - name: Download MEX artifacts
+        uses: actions/download-artifact@v3 # actions/download-artifact v3
+        with:
+          name: unix-mex-binaries
+          path: src/backend/dlls
+      - name: Run integration tests
+        run: matlab -batch "cd('src/test'); run_integration_tests; exit;"
+      - name: Upload test reports
+        uses: actions/upload-artifact@v3 # actions/upload-artifact v3
+        if: always()
+        with:
+          name: integration-test-reports
+          path: src/test/reports/integration/*
+          retention-days: 7
+
+  mex-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # actions/checkout v3
+      - name: Setup MATLAB
+        uses: matlab-actions/setup-matlab@v1 # matlab-actions/setup-matlab v1
+      - name: Download MEX artifacts
+        uses: actions/download-artifact@v3 # actions/download-artifact v3
+        with:
+          name: unix-mex-binaries
+          path: src/backend/dlls
+      - name: Run MEX tests
+        run: matlab -batch "cd('src/test'); run_mex_tests; exit;"
+      - name: Upload test reports
+        uses: actions/upload-artifact@v3 # actions/upload-artifact v3
+        if: always()
+        with:
+          name: mex-test-reports
+          path: src/test/reports/mex/*
+          retention-days: 7
+
+  windows-tests:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # actions/checkout v3
+      - name: Setup MATLAB
+        uses: matlab-actions/setup-matlab@v1 # matlab-actions/setup-matlab v1
+      - name: Download Windows MEX artifacts
+        uses: actions/download-artifact@v3 # actions/upload-artifact v3
+        with:
+          name: windows-mex-binaries
+          path: src/backend/dlls
+      - name: Run platform tests
+        run: matlab -batch "cd('src/test'); run_cross_platform_tests; exit;"
+      - name: Upload reference data
+        uses: actions/upload-artifact@v3 # actions/upload-artifact v3
+        with:
+          name: windows-reference-data
+          path: src/test/data/cross_platform/windows/*
+          retention-days: 7
+
+  cross-platform-tests:
+    needs: [mex-tests, windows-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # actions/checkout v3
+      - name: Setup MATLAB
+        uses: matlab-actions/setup-matlab@v1 # matlab-actions/setup-matlab v1
+      - name: Download MEX artifacts
+        uses: actions/download-artifact@v3 # actions/download-artifact v3
+        with:
+          name: unix-mex-binaries
+          path: src/backend/dlls
+      - name: Download Windows reference data
+        uses: actions/download-artifact@v3 # actions/download-artifact v3
+        with:
+          name: windows-reference-data
+          path: src/test/data/cross_platform/windows
+      - name: Run cross-platform tests
+        run: matlab -batch "cd('src/test'); run_cross_platform_tests; exit;"
+      - name: Upload compatibility reports
+        uses: actions/upload-artifact@v3 # actions/upload-artifact v3
+        if: always()
+        with:
+          name: cross-platform-reports
+          path: src/test/reports/cross_platform/*
+          retention-days: 7
+
+  validation-tests:
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # actions/checkout v3
+      - name: Setup MATLAB
+        uses: matlab-actions/setup-matlab@v1 # matlab-actions/setup-matlab v1
+      - name: Download MEX artifacts
+        uses: actions/download-artifact@v3 # actions/download-artifact v3
+        with:
+          name: unix-mex-binaries
+          path: src/backend/dlls
+      - name: Run validation tests
+        run: matlab -batch "cd('infrastructure/build_scripts'); run_validation_suite; exit;"
+      - name: Upload validation reports
+        uses: actions/upload-artifact@v3 # actions/upload-artifact v3
+        if: always()
+        with:
+          name: validation-reports
+          path: validation-report/*
+          retention-days: 7
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # actions/checkout v3
+      - name: Setup MATLAB
+        uses: matlab-actions/setup-matlab@v1 # matlab-actions/setup-matlab v1
+      - name: Download MEX artifacts
+        uses: actions/download-artifact@v3 # actions/download-artifact v3
+        with:
+          name: unix-mex-binaries
+          path: src/backend/dlls
+      - name: Run performance tests
+        run: matlab -batch "cd('src/test'); run_performance_tests; exit;"
+      - name: Upload performance reports
+        uses: actions/upload-artifact@v3 # actions/upload-artifact v3
+        if: always()
+        with:
+          name: performance-reports
+          path: src/test/reports/performance/*
+          retention-days: 7
+
+  test-summary:
+    needs: [unit-tests, integration-tests, mex-tests, cross-platform-tests, validation-tests, performance-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # actions/checkout v3
+      - name: Download all test artifacts
+        uses: actions/download-artifact@v3 # actions/download-artifact v3
+        with:
+          path: test_summary
+      - name: Generate summary report
+        run: |
+          echo "Generating test summary report..."
+          # Placeholder for report generation script
+          mkdir -p summary_report
+          echo "Test summary report generated." > summary_report/summary.txt
+      - name: Upload summary report
+        uses: actions/upload-artifact@v3 # actions/upload-artifact v3
+        with:
+          name: test-summary-report
+          path: summary_report/*
+          retention-days: 7
+      # - name: Post summary results as workflow comment
+      #   uses: actions/github-script@v6
+      #   with:
+      #     script: |
+      #       const fs = require('fs');
+      #       const summaryPath = 'summary_report/summary.txt';
+      #       if (fs.existsSync(summaryPath)) {
+      #         const summary = fs.readFileSync(summaryPath, 'utf8');
+      #         github.rest.issues.createComment({
+      #           issue_number: context.issue.number,
+      #           owner: context.repo.owner,
+      #           repo: context.repo.repo,
+      #           body: `Test Summary:\n${summary}`
+      #         });
+      #       } else {
+      #         console.log('Test summary file not found.');
+      #       }
