@@ -1,0 +1,99 @@
+{
+  "name": "mfe-toolbox",
+  "version": "4.0.0",
+  "description": "MATLAB Financial Econometrics Toolbox",
+  "author": "MFE Toolbox Team",
+  "license": "Proprietary",
+  "homepage": "https://github.com/mfe-toolbox/mfe-toolbox",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mfe-toolbox/mfe-toolbox.git"
+  },
+  "scripts": {
+    "build": "ts-node scripts/build.ts",
+    "build:mex": "ts-node scripts/compile-mex.ts",
+    "build:package": "matlab -nodisplay -nosplash -nodesktop -r \"try, buildZipFile, catch e, disp(e), exit(1), end, exit(0);\"",
+    "clean": "rimraf build dist",
+    "clean:mex": "rimraf dlls/*.mex*",
+    "prepare": "npm run build"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "matlab": ">=R2009b"
+  },
+  "mfe": {
+    "toolboxName": "MFE Toolbox",
+    "moduleStructure": [
+      "bootstrap",
+      "crosssection",
+      "distributions",
+      "GUI",
+      "multivariate",
+      "tests",
+      "timeseries",
+      "univariate",
+      "utility",
+      "realized",
+      "mex_source",
+      "dlls",
+      "duplication"
+    ],
+    "mexFiles": [
+      "agarch_core",
+      "armaxerrors",
+      "composite_likelihood",
+      "egarch_core",
+      "igarch_core",
+      "tarch_core"
+    ],
+    "platforms": {
+      "windows": {
+        "extension": ".mexw64",
+        "target": "PCWIN64"
+      },
+      "unix": {
+        "extension": ".mexa64",
+        "target": "GLNXA64"
+      }
+    },
+    "mfeDependencies": {
+      "MATLAB": ">=R2009b",
+      "Statistics Toolbox": "*",
+      "Optimization Toolbox": "*"
+    },
+    "buildFlags": {
+      "mex": "-largeArrayDims"
+    }
+  },
+  "os": [
+    "windows",
+    "darwin",
+    "linux"
+  ],
+  "private": true,
+  "devDependencies": {
+    "typescript": "^4.5.0",
+    "ts-node": "^10.4.0",
+    "rimraf": "^3.0.2",
+    "adm-zip": "^0.5.9",
+    "chalk": "^4.1.2",
+    "fs-extra": "^10.0.0",
+    "@types/node": "^16.11.7",
+    "@types/fs-extra": "^9.0.13",
+    "@types/adm-zip": "^0.4.34"
+  },
+  "keywords": [
+    "matlab",
+    "econometrics",
+    "finance",
+    "time-series",
+    "garch",
+    "volatility",
+    "bootstrap",
+    "statistics",
+    "high-frequency",
+    "cross-sectional",
+    "arma",
+    "armax"
+  ]
+}
